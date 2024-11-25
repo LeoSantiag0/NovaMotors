@@ -1,0 +1,318 @@
+Listar veículos dos tipos SUV Compacta e SUV Média, e valor total pago por todas as vendas de cada um deles. Deve haver o nome dos veículos na primeira coluna
+
+SELECT vei.nome            AS nome_do_veiculo,
+       vei.tipo            AS tipo_do_veiculo,
+       Sum(ven.valor_pago) AS valor_total_pago
+FROM   veiculos vei
+       JOIN vendas ven
+         ON vei.id_veiculos = ven.id_veiculos
+WHERE  vei.tipo IN ( 'SUV Compacta', 'SUV Média' )
+GROUP  BY vei.nome,
+          vei.tipo; 
+
+--
+
+Listar todos os veículos do tipo SUV Compacta e valor inferior a R$300.000,00
+
+SELECT nome  AS nome_do_veiculo,
+       tipo  AS tipo_do_veiculo,
+       valor AS valor_do_veiculo
+FROM   veiculos
+WHERE  tipo = 'SUV Compacta'
+       AND valor < 300000.00 
+
+--
+
+Exiba o id e nome dos clientes, e nome das concessionárias onde realizaram sua compras, juntamente com cidade e estado de cada uma delas. Ordene alfabeticamente pelo nome do cliente
+
+
+SELECT cli.id_clientes,
+          cli.cliente        AS nome_do_cliente,
+       con.concessionaria AS nome_da_concessionaria,
+       cid.cidade,
+       est.estado
+FROM   clientes cli
+       JOIN concessionarias con
+         ON cli.id_concessionarias = con.id_concessionarias
+       JOIN cidades cid
+         ON con.id_cidades = cid.id_cidades
+       JOIN estados est
+         ON cid.id_estados = est.id_estados
+ORDER  BY cli.cliente ASC 
+
+
+--
+
+Conte quantos vendedores exitem em cada concessionária. Listados código da concessionária e nome. Garantir que as concessionárias sem vendedores também sejam listadas.
+
+SELECT con.id_concessionarias   AS codigo_da_concessionaria,
+       con.concessionaria       AS nome_da_concessionaria,
+       Count(ven.id_vendedores) AS numero_vendedores
+FROM   concessionarias con
+       LEFT JOIN vendedores ven
+              ON con.id_concessionarias = ven.id_concessionarias
+GROUP  BY con.id_concessionarias,
+          con.concessionaria
+ORDER  BY con.id_concessionarias ASC; 
+
+
+--
+
+Encontre os veículos mais caros vendidos em cada tipo de veículo
+
+
+SELECT tipo       AS categoria_do_veiculo,
+       nome       modelo_do_veiculo,
+       Max(valor) AS valor_maximo
+FROM   veiculos
+GROUP  BY tipo,
+          nome,
+          valor
+ORDER  BY valor ASC; 
+
+
+--
+
+Liste o nome do cliente, o veículo comprado e o valor pago. Liste também a data da venda.
+
+
+SELECT cli.cliente,
+       vei.nome        AS veiculo,
+       ven.valor_pago,
+       ven.data_venda AS data_da_venda
+FROM   vendas ven
+       JOIN clientes cli
+         ON ven.id_clientes = cli.id_clientes
+       JOIN veiculos vei
+         ON ven.id_veiculos = vei.id_veiculos
+ORDER  BY ven.data_venda ASC 
+
+
+--
+
+Identifique as concessionárias que venderam mais de 5 veículos. Mostre quantos veículos ela vendeu, o valor totas das vendas, a cidade e o estado de cada concessionária.
+
+
+
+SELECT con.concessionaria,
+       Count (ven.id_vendas) AS numero_de_vendas,
+       Sum (ven.valor_pago)  AS faturamento,
+       cid.cidade,
+       est.estado
+FROM   vendas ven
+       JOIN concessionarias con
+         ON ven.id_concessionarias = con.id_concessionarias
+       JOIN cidades cid
+         ON con.id_cidades = cid.id_cidades
+       JOIN estados est
+         ON cid.id_estados = est.id_estados
+GROUP  BY con.concessionaria,
+          cid.cidade,
+          est.estado
+HAVING Count (ven.id_vendas) > 5 
+ORDER  BY faturamento DESC;
+
+
+
+SELECT nome,
+       valor
+FROM   veiculos
+ORDER  BY valor DESC
+LIMIT  3; 
+
+
+--
+
+
+SELECT nome,
+       tipo
+FROM   veiculos
+WHERE  data_inclusao > CURRENT_TIMESTAMP - interval '11 month';
+
+--
+
+SELECT cid.cidade,
+       est.estado,
+       con.concessionaria
+FROM   cidades cid
+       JOIN estados est
+         ON cid.id_estados = est.id_estados
+       LEFT JOIN concessionarias con
+              ON cid.id_cidades = con.id_cidades 
+
+
+--
+
+SELECT cli.cliente,
+       vei.nome AS veiculo,
+       vei.tipo,
+       vei.valor
+FROM   vendas ven
+       JOIN clientes cli
+         ON ven.id_clientes = cli.id_clientes
+       JOIN veiculos vei
+         ON ven.id_veiculos = vei.id_veiculos
+WHERE  vei.tipo = 'SUV Premium Híbrida'
+        OR vei.valor > 60000 
+
+--
+
+Liste somente os clientes que compraram mais de uma vez. Deve conter o id do cliente, nome, quantidade de compras e a soma do valor pago em todas as compras
+
+SELECT ven.id_clientes,
+       cli.cliente,
+       Count(*)            AS quantidade_de_vendas,
+       Sum(ven.valor_pago) AS total_das_vendas
+FROM   vendas ven
+       JOIN clientes cli
+         ON ven.id_clientes = cli.id_clientes
+GROUP  BY ven.id_clientes,
+          cli.cliente
+HAVING Count(*) > 1; 
+
+
+--
+
+Identifique os 5 estados com mais vendas. Apresente a UF ao invés do nome.
+
+
+SELECT e.sigla           AS UF,
+       Sum(v.valor_pago) AS faturamento
+FROM   vendas v
+       JOIN concessionarias co
+         ON v.id_concessionarias = co.id_concessionarias
+       JOIN cidades c
+         ON co.id_cidades = c.id_cidades
+       JOIN estados e
+         ON c.id_estados = e.id_estados
+GROUP  BY e.sigla
+ORDER  BY faturamento DESC
+LIMIT  5 
+
+
+Identifique o vendedor com mais venda em cada estado no mês de outubro/24. Liste o nome do estado, o nome do vendedor, o total de vendas de outubro, o acumulado do ano, e a média mensal.
+
+
+WITH ApuracaoPorEstado AS (
+    SELECT 
+        est.estado,
+        v.nome AS vendedor,
+        SUM(CASE 
+                WHEN ven.data_venda >= '2024-10-01 00:00:00+00' 
+                 AND ven.data_venda < '2024-11-01 00:00:00+00' 
+                THEN ven.valor_pago 
+                ELSE 0 
+            END) AS venda_outubro,
+        SUM(ven.valor_pago) AS acumulado_ano
+    FROM 
+        vendas ven
+    JOIN 
+        vendedores v ON ven.id_vendedores = v.id_vendedores
+    JOIN 
+        concessionarias con ON v.id_concessionarias = con.id_concessionarias
+    JOIN 
+        cidades cid ON con.id_cidades = cid.id_cidades
+    JOIN 
+        estados est ON cid.id_estados = est.id_estados
+    WHERE 
+        ven.data_venda >= '2024-01-01 00:00:00+00' 
+        AND ven.data_venda < '2025-01-01 00:00:00+00'
+    GROUP BY 
+        est.estado, v.nome
+),
+MaiorVendaOutEstado AS (
+    SELECT 
+        estado, 
+        MAX(venda_outubro) AS max_venda_outubro
+    FROM 
+        ApuracaoPorEstado
+    GROUP BY 
+        estado
+)
+SELECT 
+    ape.estado,
+    ape.vendedor,
+    ape.venda_outubro,
+    ape.acumulado_ano,
+    ROUND(ape.acumulado_ano / 10, 2) AS media_mensal
+FROM 
+    ApuracaoPorEstado ape
+JOIN 
+    MaiorVendaOutEstado mvoe ON ape.estado = mvoe.estado 
+                 AND ape.venda_outubro = mvoe.max_venda_outubro;
+
+
+----------------------------------------------
+
+
+
+Identifique o vendedor com o menor acumulado de venda do ano de cada concessionária. Liste o nome da concessionária, o nome do vendedor e aculumado de venda
+
+
+
+
+WITH ApuracaoPorConcessionaria AS (
+    SELECT
+        con.id_concessionarias,
+        con.concessionaria,
+        v.nome AS vendedor,
+        SUM(ven.valor_pago) AS acumulado_ano
+    FROM 
+        vendas ven
+    JOIN 
+        vendedores v ON ven.id_vendedores = v.id_vendedores
+    JOIN 
+        concessionarias con ON v.id_concessionarias = con.id_concessionarias
+    WHERE 
+        ven.data_venda >= '2024-01-01 00:00:00+00' 
+        AND ven.data_venda < '2025-01-01 00:00:00+00'
+    GROUP BY 
+        con.id_concessionarias,con.concessionaria, v.nome
+    ORDER BY 
+        con.id_concessionarias ASC
+),
+MenorVendaConcessionaria AS (
+    SELECT 
+        concessionaria, 
+        MIN(acumulado_ano) AS menor_acumulado_ano
+    FROM 
+        ApuracaoPorConcessionaria
+    GROUP BY 
+        concessionaria
+)
+SELECT 
+    apc.id_concessionarias,
+    apc.concessionaria,
+    apc.vendedor,
+    apc.acumulado_ano
+FROM 
+    ApuracaoPorConcessionaria apc
+JOIN 
+    MenorVendaConcessionaria mvc ON apc.concessionaria = mvc.concessionaria 
+                 AND apc.acumulado_ano = mvc.menor_acumulado_ano;
+
+
+
+--------------------------------------------
+
+
+select
+    ven.id_concessionarias as concessionaria,
+    v.nome as vendedor,
+    sum(ven.valor_pago) as acumulado_ano
+from
+    vendas ven
+    join vendedores v
+        on ven.id_vendedores = v.id_vendedores
+where
+    ven.id_concessionarias = 25
+    and
+    ven.data_venda >= '2024-01-01 00:00:00+00' 
+    AND ven.data_venda < '2025-01-01 00:00:00+00'
+group by 
+    ven.id_concessionarias,vendedor
+order by acumulado_ano ASC
+
+
+
+
